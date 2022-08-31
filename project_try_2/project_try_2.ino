@@ -1,11 +1,11 @@
 #define buzzer 6
 #define smart_leds 12
-#define alarm_leds 11
+#define alarm_leds 13 
 
 #define servo1 8
 
 #define ir_sensor_out 5
-#define ir_sensor_in 4
+#define ir_sensor_in 4  
 #define temp_sensor A5
 #define ldr_sensor A0
 
@@ -17,7 +17,7 @@
 #define f 31
 #define g 32
 
-#define alarm_temperature 55
+#define alarm_temperature 50.0
 
 
 bool ir_sensor_out_old=true;
@@ -28,8 +28,16 @@ bool car_leaving=false;
 
 int temperature_reading;
 
-int gate=90;
+int gate=0;
+int light = 0;
 int empty_places=5;
+
+
+unsigned long interval =5000;
+//
+unsigned long current_time = 0;
+//
+unsigned long new_time=0;
 
 #include <Servo.h>
 
@@ -63,7 +71,7 @@ void setup() {
   
   Serial.begin(9600);
   display_empty_places();
-  close_gate();
+
 
 
 }
@@ -96,15 +104,31 @@ bool ir_in_detect(){
 
 
 
-int get_light_value(){
-  Serial.println(analogRead(ldr_sensor));
-  return map(analogRead(ldr_sensor),50,1050,0,255);
+void power_light(){
+  if (analogRead(ldr_sensor)>700){
+    while(light<256){
+      analogWrite(smart_leds,light);
+      light++;
+      delay(5);
+      
+    }
+
+
+  }
+  else {
+    while(light>=0){
+      analogWrite(smart_leds,light);
+      light--;
+      delay(5);
+    }
+    
+  }
 }
 
 
 
 float get_temp_value(){
-//  Serial.println(((5./1023.)*analogRead(temp_sensor))/0.01);
+  Serial.println(((5./1023.)*analogRead(temp_sensor))/0.01);
   return ((5./1023.)*analogRead(temp_sensor))/0.01;
   
 }
@@ -130,23 +154,34 @@ void buzzer_sound(){
   }
 }
 
-void open_gate(){
- 
-  while(gate<95){
-    myservo.write(gate);
-    gate++;
-    delay(15);
-  }
-  
-}
-
-
 void close_gate(){
   while(gate>=0){
     myservo.write(gate);
     gate--;
-    delay(15);
+    delay(10);
   }
+  
+
+  
+}
+
+
+void open_gate(){
+  while(gate<80){
+    myservo.write(gate);
+    gate++;
+    delay(20);
+  }
+
+}
+void alarm_car(){
+  open_gate();
+  digitalWrite(alarm_leds,1);
+  digitalWrite(buzzer,1);
+  delay(300);
+  digitalWrite(alarm_leds,0);
+  digitalWrite(buzzer,0);
+  delay(300);
   
 }
 
@@ -281,26 +316,35 @@ void display_empty_places(){
 
 
 void loop() {
-  
-  analogWrite(smart_leds,get_light_value());
-//  alarm_case();
-//  if(check_alarm_case()){
-////    alarm_case();
-//  }
+  power_light();
+  if(check_alarm_case()){
+    alarm_case();
+  }
+    
   
   if (ir_out_detect()){
     if(car_leaving){
-      display_empty_places();
-      close_gate();
-      
       car_leaving = false;
       empty_places++;
-      
+      display_empty_places();
+      close_gate();
     }
     else {
       if(empty_places){
+        current_time=millis();
+        car_entering=true;
         open_gate();
-        car_entering=true; 
+        }
+      else{
+        for(int i=0;i<2;i++){
+          clear_display();
+          delay(100);
+          display_empty_places();
+          digitalWrite(buzzer,1);
+          delay(100); 
+          digitalWrite(buzzer,0);
+          
+        } 
         
       }
       
@@ -311,26 +355,34 @@ void loop() {
 
   if (ir_in_detect()){
     if(car_entering){
-      display_empty_places();
-     
-      close_gate();
-      
       car_entering= false;
       empty_places--;
-      
+      display_empty_places();
+      close_gate();
+       
     }
     else{
-      if (empty_places<5){
+      if(empty_places<5){
+        current_time=millis();
         open_gate();
         car_leaving=true;
         
       }
+      
     }
   }
-  if(!car_entering && !car_leaving && !check_alarm_case()){
-    close_gate();
+  if(car_entering || car_leaving){
+    new_time=millis();
+    if(new_time-current_time>interval){
+      alarm_car();
+    }
   }
-  delay(100);
+
+  
+//  if(!car_entering && !car_leaving && !check_alarm_case()){
+//    close_gate();
+//  }
+  delay(25);
 
   
 }
