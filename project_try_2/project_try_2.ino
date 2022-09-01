@@ -19,6 +19,7 @@
 
 #define alarm_temperature 50.0
 
+#include <Servo.h>
 
 bool ir_sensor_out_old=true;
 bool ir_sensor_in_old=true;
@@ -39,7 +40,6 @@ unsigned long current_time = 0;
 //
 unsigned long new_time=0;
 
-#include <Servo.h>
 
 
 Servo myservo;
@@ -61,7 +61,6 @@ void setup() {
   pinMode(f,OUTPUT);
   pinMode(g,OUTPUT);
 
-  
   myservo.attach(servo1);
 
   pinMode(ir_sensor_out,INPUT);
@@ -71,9 +70,59 @@ void setup() {
   
   Serial.begin(9600);
   display_empty_places();
+}
 
+void loop() {
+  power_light();
+  if(check_alarm_case()){
+    alarm_case();
+  }
+  
+  if (ir_out_detect()){
+    if(car_leaving){
+      car_leaving = false;
+      empty_places++;
+      display_empty_places();
+      close_gate();
+    }
+    else {
+      if(empty_places){
+        current_time=millis();
+        car_entering=true;
+        open_gate();
+        }
+      else{
+        no_available_places();
+      }
+    }
+  }
+  if (ir_in_detect()){
+    if(car_entering){
+      car_entering= false;
+      empty_places--;
+      display_empty_places();
+      close_gate();
+       
+    }
+    else{
+      if(empty_places<5){
+        current_time=millis();
+        open_gate();
+        car_leaving=true;
+      }
+    }
+  }
+  if(car_entering || car_leaving){
+    new_time=millis();
+    if(new_time-current_time>interval){
+      alarm_car();
+    }
+  }
 
-
+  
+ if(!car_entering && !car_leaving && !check_alarm_case()){
+   close_gate();
+ }
 }
 
 
@@ -130,7 +179,6 @@ void power_light(){
 float get_temp_value(){
   Serial.println(((5./1023.)*analogRead(temp_sensor))/0.01);
   return ((5./1023.)*analogRead(temp_sensor))/0.01;
-  
 }
 
 
@@ -154,17 +202,14 @@ void buzzer_sound(){
   }
 }
 
+
 void close_gate(){
   while(gate>=0){
     myservo.write(gate);
     gate--;
     delay(10);
   }
-  
-
-  
 }
-
 
 void open_gate(){
   while(gate<80){
@@ -172,8 +217,10 @@ void open_gate(){
     gate++;
     delay(20);
   }
-
 }
+
+
+
 void alarm_car(){
   open_gate();
   digitalWrite(alarm_leds,1);
@@ -195,11 +242,25 @@ void alarm_case(){
   digitalWrite(buzzer,0);
   delay(100);
 }
+
 bool check_alarm_case(){
   return get_temp_value()>alarm_temperature;
-}    
+}  
+
+
+void no_available_places(){
+  for(int i=0;i<2;i++){
+    clear_display();
+    delay(100);
+    display_empty_places();
+    digitalWrite(buzzer,1);
+    delay(100); 
+    digitalWrite(buzzer,0);
+    
+  } 
+
+}
  
-  
 
 
 // 7 segment optimizations
@@ -310,79 +371,4 @@ void display_empty_places(){
   else{
     clear_display();
   }
-}
-
-
-
-
-void loop() {
-  power_light();
-  if(check_alarm_case()){
-    alarm_case();
-  }
-    
-  
-  if (ir_out_detect()){
-    if(car_leaving){
-      car_leaving = false;
-      empty_places++;
-      display_empty_places();
-      close_gate();
-    }
-    else {
-      if(empty_places){
-        current_time=millis();
-        car_entering=true;
-        open_gate();
-        }
-      else{
-        for(int i=0;i<2;i++){
-          clear_display();
-          delay(100);
-          display_empty_places();
-          digitalWrite(buzzer,1);
-          delay(100); 
-          digitalWrite(buzzer,0);
-          
-        } 
-        
-      }
-      
-    }
-  }
-
-
-
-  if (ir_in_detect()){
-    if(car_entering){
-      car_entering= false;
-      empty_places--;
-      display_empty_places();
-      close_gate();
-       
-    }
-    else{
-      if(empty_places<5){
-        current_time=millis();
-        open_gate();
-        car_leaving=true;
-        
-      }
-      
-    }
-  }
-  if(car_entering || car_leaving){
-    new_time=millis();
-    if(new_time-current_time>interval){
-      alarm_car();
-    }
-  }
-
-  
-//  if(!car_entering && !car_leaving && !check_alarm_case()){
-//    close_gate();
-//  }
-  delay(25);
-
-  
 }
