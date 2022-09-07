@@ -262,7 +262,6 @@ void no_available_places(){
 }
  
 
-
 // 7 segment optimizations
 
 void display1() 
@@ -275,7 +274,6 @@ void display1()
   digitalWrite(f,0);
   digitalWrite(g,0);
 } 
-
 
 void display2() 
 {
@@ -336,7 +334,6 @@ void display0()
   digitalWrite(g,0); 
 } 
 
-
 void clear_display() 
 { 
   digitalWrite(a,0);
@@ -347,7 +344,6 @@ void clear_display()
   digitalWrite(e,0);  
   digitalWrite(f,0);  
 } 
-
 
 void display_empty_places(){
   if (empty_places==5){
