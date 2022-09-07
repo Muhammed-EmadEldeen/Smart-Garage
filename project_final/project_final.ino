@@ -1,5 +1,3 @@
-#define buzzer 6
-#define smart_leds 12
 #define alarm_leds 13 
 
 #define servo1 8
@@ -72,6 +70,9 @@ void setup() {
   display_empty_places();
 }
 
+
+
+
 void loop() {
   power_light();
   if(check_alarm_case()){
@@ -124,6 +125,8 @@ void loop() {
    close_gate();
  }
 }
+
+
 
 
 bool ir_out_detect(){
@@ -182,6 +185,21 @@ float get_temp_value(){
 }
 
 
+
+
+void alarm_case(){
+
+  open_gate();
+  digitalWrite(alarm_leds,1);
+  digitalWrite(buzzer,1);
+  delay(100);
+  digitalWrite(alarm_leds,0);
+  digitalWrite(buzzer,0);
+  delay(100);
+}
+
+
+
 void blinking_led(){
   digitalWrite(alarm_leds,1);
   delay(100);
@@ -232,16 +250,6 @@ void alarm_car(){
   
 }
 
-
-void alarm_case(){
-  open_gate();
-  digitalWrite(alarm_leds,1);
-  digitalWrite(buzzer,1);
-  delay(100);
-  digitalWrite(alarm_leds,0);
-  digitalWrite(buzzer,0);
-  delay(100);
-}
 
 bool check_alarm_case(){
   return get_temp_value()>alarm_temperature;
